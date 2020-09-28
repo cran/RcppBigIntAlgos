@@ -1,3 +1,16 @@
+RcppBigIntAlgos 0.3.1 (Release date: 2020-09-28)
+
+* Fixed URL in README
+
+RcppBigIntAlgos 0.3.0 (Release date: Never Released)
+
+* Multiple threads can now be used.
+* Switched completely to gmpxx. Had to copy gmpxx source and modify in order to easily build on all platforms.
+
+RcppBigIntAlgos 0.2.5 (Release date: Never Released)
+
+* Improved efficiency of quadraticSieve by segmenting the sieving portion. For larger number (greater than 65 decimal digits) it has a great impact.
+
 RcppBigIntAlgos 0.2.4 (Release date: 2020-06-23)
 
 * Fixed link in documentation in accordance with the new policy in Writing R Extensions (section: Cross-references)

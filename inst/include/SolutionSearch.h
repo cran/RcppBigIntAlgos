@@ -4,8 +4,11 @@
 #include "SieveUtils.h"
 #include "ReduceMatrix.h"
 
-void solutionSearch(std::vector<uint8_t> mat, std::size_t matNRows,
-                    std::size_t matNCols, mpz_t n, mpz_t *const mpzFacBase,
-                    mpz_t *const test, mpz_t *const factors);
+void SolutionSearch(const std::vector<std::uint8_t> &mat, std::size_t matNRows,
+                    std::size_t matNCols, const mpz_class &myNum,
+                    const std::vector<mpz_class> &mpzFacBase,
+                    const std::vector<mpz_class> &testInterval,
+                    std::vector<mpz_class> &factors,
+                    std::size_t nThreads, bool bShowStats);
 
 #endif

@@ -38,6 +38,12 @@ test_that("quadraticSieve generates correct numbers", {
                   401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463,
                   467, 479, 487, 491, 499)
     
+    ## ******************* Gmpxx Note **********************
+    ## We are now using gmpxx, thus we are able to take advantage
+    ## of std::vector<mpz_class> which means we no longer have to
+    ## worry with the complex resizing issues we had before. We
+    ## now only include these examples for posterity
+    
     ## We are ensuring that the resizing of the factors array is correct
     expect_equal(quadraticSieve(prod.bigz(prime500)),
                  factorize(prod.bigz(prime500)))
@@ -53,6 +59,7 @@ test_that("quadraticSieve generates correct numbers", {
                    5693, 5701, 5711, 5717, 5737, 5741, 5743, 5749, 5779, 5783,
                    5791)
     
+    ## See Gmpxx Note above
     ## Again, we are ensuring that the resizing of the factors array is
     ## correct (It can occur in multiple places in quadraticSieve)
     a <- quadraticSieve(prod.bigz(c(prime500, prime5K58)))
@@ -64,7 +71,32 @@ test_that("quadraticSieve generates correct numbers", {
     expect_equal(a, b)
 })
 
+test_that("quadraticSieve generates correct numbers with multiple threads", {
+    test1 <- nextprime(urand.bigz(2, 82, 42))
+    expect_equal(prod(quadraticSieve(prod(test1), nThreads = 2)), prod(test1))
+    
+    test2 <- nextprime(urand.bigz(2, 83, 42))
+    expect_equal(prod(quadraticSieve(prod(test2), nThreads = 2)), prod(test2))
+    
+    test3 <- nextprime(urand.bigz(2, 84, 42))
+    expect_equal(prod(quadraticSieve(prod(test3), nThreads = 2)), prod(test3))
+    
+    test4 <- nextprime(urand.bigz(2, 85, 42))
+    expect_equal(prod(quadraticSieve(prod(test4), nThreads = 2)), prod(test4))
+    
+    test5 <- nextprime(urand.bigz(2, 86, 42))
+    expect_equal(prod(quadraticSieve(prod(test5), nThreads = 2)), prod(test5))
+})
+
 test_that("quadraticSieve produces appropriate error messages", {
     expect_error(quadraticSieve(1:10), "Can only factor one number at a time")
     expect_error(quadraticSieve(0), "Cannot factorize 0")
+    expect_error(quadraticSieve(1234567, nThreads = "9"),
+                 "This type is not supported! No conversion possible for nThreads")
+    expect_error(quadraticSieve(1234567, nThreads = 3.5),
+                 "nThreads must be a whole number")
+    expect_error(quadraticSieve(1234567, showStats = "T"),
+                 "Only logical values are supported for showStats")
+    expect_error(quadraticSieve(1234567, skipExtPolRho = "T"),
+                 "Only logical values are supported for skipExtPolRho")
 })
