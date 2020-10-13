@@ -11,7 +11,7 @@
 ## Overview
 
 RcppBigIntAlgos uses the C library GMP (GNU Multiple Precision Arithmetic) for efficiently
-factoring big integers. For very large integers, prime factorization is carried out by a variant of the quadratic sieve algorithm that implements multiple polynomials. For smaller integers, a constrained version of the Pollard's rho algorithm is used (original code from <https://gmplib.org/>... this is the same algorithm found in the [R gmp package](<https://CRAN.R-project.org/package=gmp>) called by the function `factorize`). Finally, one can quickly obtain a complete factorization of a given number `n` via `divisorsBig`.
+factoring big integers. Links to `RcppThread` for factoring in parallel. For very large integers, prime factorization is carried out by a variant of the quadratic sieve algorithm that implements multiple polynomials. For smaller integers, a constrained version of the Pollard's rho algorithm is used (original code from <https://gmplib.org/>... this is the same algorithm found in the [R gmp package](<https://CRAN.R-project.org/package=gmp>) called by the function `factorize`). Finally, one can quickly obtain a complete factorization of a given number `n` via `divisorsBig`.
 
 ## Installation
 
@@ -110,7 +110,7 @@ Big Integer ('bigz') object of length 6:
 
 ## The Quadratic Sieve
 
-The function `quadraticSieve` implements the multiple polynomial quadratic sieve algorithm. Currently, `quadraticSieve` can comfortably factor numbers with less than 60 digits (~200 bits).
+The function `quadraticSieve` implements the multiple polynomial quadratic sieve algorithm. Currently, `quadraticSieve` can comfortably factor numbers with less than 70 digits (~230 bits) on most standard personal computers. If you have access to powerful computers with many cores, factoring 100+ digit semiprimes in less than a day is not out of the question.
 
 ```r
 ## Generate large semi-primes
@@ -157,160 +157,24 @@ system.time(print(quadraticSieve(semiPrime120bits)))
 Big Integer ('bigz') object of length 2:
 [1] 638300143449131711  1021796573707617139
    user  system elapsed 
-  0.091   0.000   0.091
+  0.086   0.001   0.085
   
 system.time(print(quadraticSieve(semiPrime130bits)))
 Big Integer ('bigz') object of length 2:
 [1] 14334377958732970351 29368224335577838231
    user  system elapsed 
-  0.117   0.000   0.117
+  0.102   0.000   0.103
 
 system.time(print(quadraticSieve(semiPrime140bits)))
 Big Integer ('bigz') object of length 2:
 [1] 143600566714698156857  1131320166687668315849
    user  system elapsed 
-  0.205   0.000   0.205 
-```
-
-### 50+ Digits
-
-Below, we factor a 50 digit semiprime in under 2 secs followed by a 60 digit semiprime factored in under 20 seconds. Also, we see can see summary statistics by setting `showStats = TRUE` (N.B. This is will slow down execution slightly).
-
-```r
-semiPrime164bits <- prod(nextprime(urand.bigz(2, 82, 42)))
-
-## The 164 bit number is 50 digits
-nchar(as.character(semiPrime164bits))
-[1] 50
-
-## We see this about 0.25 seconds faster than setting showStats = TRUE
-system.time(quadraticSieve(semiPrime164bits))
-   user  system elapsed 
-  1.671   0.005   1.672
-
-quadraticSieve(semiPrime164bits, showStats = TRUE)
-
-Summary Statistics for Factoring:
-    10050120961360479179164300841596861740399588283187
-
-|  Pollard Rho Time  |
-|--------------------|
-|        77ms        |
-
-|      MPQS Time     | Complete | Polynomials |   Smooths  |  Partials  |
-|--------------------|----------|-------------|------------|------------|
-|      1s 800ms      |   100%   |     740     |    1010    |    1012    |
-
-|  Mat Algebra Time  |
-|--------------------|
-|        261ms       |
-
-|     Total Time     |
-|--------------------|
-|      2s 196ms      |
-
-Big Integer ('bigz') object of length 2:
-[1] 2128750292720207278230259 4721136619794898059404993
-
- 
-## And here is the 60 digit example
-semiPrime200bits <- prod(nextprime(urand.bigz(2, 100, 1729)))
-
-nchar(as.character(semiPrime200bits))
-[1] 60
-
-quadraticSieve(semiPrime200bits, showStats = TRUE)
-
-Summary Statistics for Factoring:
-    394753378083444510740772455309612207212651808400888672450967
-
-|  Pollard Rho Time  |
-|--------------------|
-|        59ms        |
-
-|      MPQS Time     | Complete | Polynomials |   Smooths  |  Partials  |
-|--------------------|----------|-------------|------------|------------|
-|      16s 267ms     |   100%   |     4267    |    1848    |    2221    |
-
-|  Mat Algebra Time  |
-|--------------------|
-|      1s 604ms      |
-
-|     Total Time     |
-|--------------------|
-|       18s 7ms      |
-
-Big Integer ('bigz') object of length 2:
-[1] 514864663444011777835756770809 766712897798959945129214210063
-```
-
-Finally, we factor the largest [Cunnaningham Most Wanted](<https://www.lehigh.edu/~bad0/msg06332.html>) number from the first edition released in 1983 in under 2.5 minutes followed by [RSA-79](<https://members.loria.fr/PZimmermann/records/rsa.html>) in under 20 minutes.
-
-```r
-mostWanted1983 <- as.bigz(div.bigz(sub.bigz(pow.bigz(10, 71), 1), 9))
-
-mostWanted1983
-Big Integer ('bigz') :
-[1] 11111111111111111111111111111111111111111111111111111111111111111111111
-
-quadraticSieve(mostWanted1983, showStats = TRUE)
-
-Summary Statistics for Factoring:
-    11111111111111111111111111111111111111111111111111111111111111111111111
-
-|  Pollard Rho Time  |
-|--------------------|
-|      1s 296ms      |
-
-|      MPQS Time     | Complete | Polynomials |   Smooths  |  Partials  |
-|--------------------|----------|-------------|------------|------------|
-|     2m 6s 912ms    |   100%   |    16823    |    4172    |    4252    |
-
-|  Mat Algebra Time  |
-|--------------------|
-|      15s 259ms     |
-
-|     Total Time     |
-|--------------------|
-|    2m 23s 685ms    |
-
-Big Integer ('bigz') object of length 2:
-[1] 241573142393627673576957439049            45994811347886846310221728895223034301839
-
-
-## ***************************************************************************
-
-
-rsa79 <- as.bigz("7293469445285646172092483905177589838606665884410340391954917800303813280275279")
-
-quadraticSieve(rsa79, showStats=TRUE)
-
-Summary Statistics for Factoring:
-    7293469445285646172092483905177589838606665884410340391954917800303813280275279
-
-|  Pollard Rho Time  |
-|--------------------|
-|      12s 738ms     |
-
-|      MPQS Time     | Complete | Polynomials |   Smooths  |  Partials  |
-|--------------------|----------|-------------|------------|------------|
-|    16m 47s 863ms   |   100%   |    96215    |    5671    |    7155    |
-
-|  Mat Algebra Time  |
-|--------------------|
-|      51s 534ms     |
-
-|     Total Time     |
-|--------------------|
-|    17m 53s 178ms   |
-
-Big Integer ('bigz') object of length 2:
-[1] 848184382919488993608481009313734808977  8598919753958678882400042972133646037727
+  0.173   0.000   0.174
 ```
 
 ### Using Multiple Threads
 
-With version `0.3.0`, we can now utilize multiple threads. For example, `mostWanted1983` is now factored in under a minute and **RSA-79** can now be factored in under 7 minutes on my machine. I obtained the best performance when `nThreads = stdThreadMax() / 2`. When the number of threads was maximized, there was a decrease in efficiency probably due to pollution of the cache.
+As of version `0.3.0`, we can utilize multiple threads with the help of [RcppThread](https://github.com/tnagler/RcppThread). For example, we factor the largest [Cunnaningham Most Wanted](<https://www.lehigh.edu/~bad0/msg06332.html>) number from the first edition released in 1983 in under a minute and [RSA-79](<https://members.loria.fr/PZimmermann/records/rsa.html>) can be factored in under 6 minutes on my machine. I obtained the best performance when `nThreads = stdThreadMax() / 2`. When the number of threads was maximized, there was a decrease in efficiency probably due to pollution of the cache.
 
 ```r
 quadraticSieve(mostWanted1983, nThreads=4, skipExtPolRho=TRUE, showStats=TRUE)
@@ -320,19 +184,19 @@ Summary Statistics for Factoring:
 
 |  Pollard Rho Time  |
 |--------------------|
-|        55ms        |
+|        52ms        |
 
 |      MPQS Time     | Complete | Polynomials |   Smooths  |  Partials  |
 |--------------------|----------|-------------|------------|------------|
-|      35s 983ms     |   100%   |    16843    |    4175    |    4259    |
+|      34s 765ms     |   100%   |    15919    |    4511    |    4461    |
 
-|  Mat Algebra Time  |
-|--------------------|
-|      14s 792ms     |
+|  Mat Algebra Time  |    Mat Dimension   |
+|--------------------|--------------------|
+|      5s 123ms      |     8836 x 8972    |
 
 |     Total Time     |
 |--------------------|
-|      51s 79ms      |
+|      40s 133ms     |
 
 Big Integer ('bigz') object of length 2:
 [1] 241573142393627673576957439049            45994811347886846310221728895223034301839
@@ -348,19 +212,19 @@ Summary Statistics for Factoring:
 
 |  Pollard Rho Time  |
 |--------------------|
-|        65ms        |
+|        66ms        |
 
 |      MPQS Time     | Complete | Polynomials |   Smooths  |  Partials  |
 |--------------------|----------|-------------|------------|------------|
-|    5m 41s 650ms    |   100%   |    96257    |    5676    |    7160    |
+|    5m 19s 965ms    |   100%   |    100725   |    5581    |    7166    |
 
-|  Mat Algebra Time  |
-|--------------------|
-|      53s 175ms     |
+|  Mat Algebra Time  |    Mat Dimension   |
+|--------------------|--------------------|
+|      12s 694ms     |    12605 x 12747   |
 
 |     Total Time     |
 |--------------------|
-|    6m 35s 453ms    |
+|    5m 33s 179ms    |
 
 Big Integer ('bigz') object of length 2:
 [1] 848184382919488993608481009313734808977  8598919753958678882400042972133646037727
@@ -380,31 +244,31 @@ Summary Statistics for Factoring:
 
 |  Pollard Rho Time  |
 |--------------------|
-|        57ms        |
+|        51ms        |
 
 |      MPQS Time     | Complete | Polynomials |   Smooths  |  Partials  |
 |--------------------|----------|-------------|------------|------------|
-|      11s 854ms     |   100%   |     2887    |    1738    |    2064    |
+|      11s 273ms     |   100%   |     2914    |    1704    |    2098    |
 
-|  Mat Algebra Time  |
-|--------------------|
-|      1s 604ms      |
+|  Mat Algebra Time  |    Mat Dimension   |
+|--------------------|--------------------|
+|        470ms       |     3745 x 3802    |
 
 
 Summary Statistics for Factoring:
-    588086587700463836402055514719534121277
+    369498233670465681342232176125551121921
 
 |      MPQS Time     | Complete | Polynomials |   Smooths  |  Partials  |
 |--------------------|----------|-------------|------------|------------|
-|        211ms       |   100%   |     133     |     404    |     385    |
+|        115ms       |   100%   |      63     |     597    |     246    |
 
-|  Mat Algebra Time  |
-|--------------------|
-|        35ms        |
+|  Mat Algebra Time  |    Mat Dimension   |
+|--------------------|--------------------|
+|        18ms        |      801 x 843     |
 
 |     Total Time     |
 |--------------------|
-|      13s 909ms     |
+|      11s 997ms     |
 
 Big Integer ('bigz') object of length 3:
 [1] 11281626468262639417 17955629036507943829 32752213052784053513
@@ -425,7 +289,7 @@ However `gmp::factorize` is more suitable for numbers smaller than 70 bits (abou
 
 ## Safely Interrupt Execution in **`quadraticSieve`**
 
-If you want to interrupt a command which will take a long time, hit Ctrl + c, or esc if using RStudio, to stop execution. Underneath, we check for user interruption once every second.
+If you want to interrupt a command which will take a long time, hit Ctrl + c, or esc if using RStudio, to stop execution.
 
 ```r
 ## User hits Ctrl + c
