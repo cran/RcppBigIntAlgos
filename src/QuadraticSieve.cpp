@@ -45,19 +45,57 @@ constexpr std::size_t ParBitCutOff = 160u;
 //     
 //     Coefficients:
 //     (Intercept)  DigSize[10:11]  
-//        -2300.00              45
+//        -2100.00           41.67
 //
 // ***********************************************************************
 
-inline double GetIntervalSize(double dig) {
-    if (dig < 85) {
-        return std::ceil(34.0943408 * dig - 1.4227370
-                             * std::pow(dig, 2.0) + 0.0253568
-                             * std::pow(dig, 3.0) - 0.0001237
-                             * std::pow(dig, 4.0) - 300.8135198);
+double GetIntervalSize(double nDig) {
+    if (nDig < 85) {
+        return std::ceil(34.0943408 * nDig - 1.4227370
+                             * std::pow(nDig, 2.0) + 0.0253568
+                             * std::pow(nDig, 3.0) - 0.0001237
+                             * std::pow(nDig, 4.0) - 300.8135198);
     } else {
-        return std::ceil(41.67 * dig - 2100.0);
+        return std::ceil(41.67 * nDig - 2100.0);
     }
+}
+
+// The idea is that we are trying to minimize the size of myLogs, an essential
+// vector in the sieving section
+int GetVecMax(int maxBasePrime, int tempLenB, std::size_t nThreads) {
+    
+    int vecMaxSize = std::min(static_cast<int>(((L1Cache + maxBasePrime - 1)
+                                                    / L1Cache) * L1Cache),
+                                                    2 * tempLenB);
+    if (vecMaxSize < (2 * tempLenB)) {
+        int myDiv = 1;
+        
+        for (; (vecMaxSize / myDiv) > (8 * L1Cache) && myDiv < L1Cache;)
+            myDiv *= 2;
+        
+        if (myDiv == 1 && (vecMaxSize > (4 * L1Cache)) && nThreads > 1) {
+            vecMaxSize = (4 * L1Cache);
+        } else {
+            const int baseVecMax = L1Cache / myDiv;
+            int myMult = std::numeric_limits<int>::max();
+            int myIndex = 0;
+            
+            for (int i = myDiv; (i * baseVecMax) < (8 * L1Cache); ++i) {
+                vecMaxSize = i * baseVecMax;
+                
+                int tempMult = (maxBasePrime + vecMaxSize - 1) / vecMaxSize;
+                
+                if (tempMult < myMult) {
+                    myMult = tempMult;
+                    myIndex = i;
+                }
+            }
+            
+            vecMaxSize = myIndex * baseVecMax;
+        }
+    }
+    
+    return vecMaxSize;
 }
 
 void QuadraticSieve(const mpz_class &myNum, std::vector<mpz_class> &factors,
@@ -88,54 +126,50 @@ void QuadraticSieve(const mpz_class &myNum, std::vector<mpz_class> &factors,
     
     const std::vector<int> facBase = GetPrimesQuadRes(myNum, LimB, fudge1, sqrLogLog, myTarget);
     const double dblLenB = GetIntervalSize(dblDigCount);
-    
-    const std::size_t LenB = static_cast<std::size_t>(dblLenB) * 1000;
-    const int DoubleLenB = 2 * LenB + 1;
+    unsigned long int LenB = dblLenB * 1000;
     
     const std::size_t facSize = facBase.size();
-    const int vecMaxSize = std::min(static_cast<int>(((L1Cache + facBase.back() - 1)
-                                                        / L1Cache) * L1Cache), DoubleLenB);
+    const int vecMaxSize = GetVecMax(facBase.back(), LenB, nThreads);
+    
+    if (vecMaxSize < 2 * LenB) {LenB = (vecMaxSize) * (1 + LenB / (vecMaxSize));}
+    const int TwiceLenB = 2 * LenB;
     
     // This array will be passed to solutionSeach.
     std::vector<mpz_class> mpzFacBase;
     
     mpz_class Temp;
     Temp = myNum * 2;
-    Temp = sqrt(Temp);
-    Temp *= static_cast<unsigned long int>(LenB);
+    Temp = sqrt(Temp) * LenB;
     
     const double fudge2 = (digCount < 45) ? 1.410 :
                           (digCount < 50) ? 1.440 :
                           (digCount < 60) ? 1.505 : 
                           (digCount < 65) ? 1.520 : 1.540;
     
-    const int theCut = std::ceil(50.0 * fudge2 *
-                                 static_cast<double>(mpz_sizeinbase(Temp.get_mpz_t(), 10)));
-    
-    std::vector<int> LnFB(facSize);
+    const logType theCut = std::ceil(100.0 * fudge2 *
+                                     static_cast<double>(mpz_sizeinbase(Temp.get_mpz_t(), 10)));
+    std::vector<logType> LnFB(facSize);
     
     for (std::size_t i = 0; i < facSize; ++i) {
         mpzFacBase.push_back(facBase[i]);
-        LnFB[i] = std::floor(50.0 * std::log(static_cast<double>(facBase[i])));
+        LnFB[i] = std::ceil(100.0 * std::log(static_cast<double>(facBase[i])));
     }
     
-    Temp = sqrt(myNum);
-    Temp -= static_cast<unsigned long int>(LenB);
-    
+    Temp = sqrt(myNum) - LenB;
     const int minPrime = static_cast<int>(mpz_sizeinbase(Temp.get_mpz_t(), 10) * 2);
-    const auto it = std::find_if(facBase.cbegin(), facBase.cend(),
-                                 [minPrime](int f) {return f > minPrime;});
+    const auto itLow = std::lower_bound(facBase.cbegin(), facBase.cend(), minPrime);
+    const std::size_t strt = std::distance(facBase.cbegin(), itLow);
     
-    const std::size_t strt = std::distance(facBase.cbegin(), it) + 1u;
-    const std::vector<std::size_t> SieveDist = SetSieveDist(facBase, myNum);
+    const auto itUpper = std::lower_bound(facBase.cbegin(), facBase.cend(), vecMaxSize);
+    const std::size_t vecMaxStrt = std::distance(facBase.cbegin(), itUpper);
     
-    mpz_class LowBound;
-    LowBound = -1 * static_cast<int>(LenB);
+    const std::vector<std::size_t> SieveDist = GetSieveDist(facBase, myNum);
+    const int LowBound = -1 * static_cast<int>(LenB);
     
     mpz_class NextPrime;
     mpz_mul_2exp(NextPrime.get_mpz_t(), myNum.get_mpz_t(), 1);
     NextPrime = sqrt(NextPrime);
-    NextPrime /= static_cast<unsigned long int>(LenB);
+    NextPrime /= LenB;
     NextPrime = sqrt(NextPrime);
     
     if (cmp(NextPrime, facBase.back()) < 0)
@@ -146,8 +180,8 @@ void QuadraticSieve(const mpz_class &myNum, std::vector<mpz_class> &factors,
     
     if (IsParallel) {
         myPoly.FactorParallel(SieveDist, facBase, LnFB, mpzFacBase, NextPrime,
-                              LowBound, myNum, theCut, DoubleLenB, vecMaxSize,
-                              strt, checkPoint0, nThreads);
+                              myNum, LowBound, theCut, TwiceLenB, vecMaxSize,
+                              strt, vecMaxStrt, checkPoint0, nThreads);
 
         if (myPoly.ContinueToSolution()) {
             myPoly.GetSolution(mpzFacBase, facBase, factors,
@@ -167,8 +201,8 @@ void QuadraticSieve(const mpz_class &myNum, std::vector<mpz_class> &factors,
 
     while (cmp(factors[0], 0) == 0) {
         myPoly.FactorSerial(SieveDist, facBase, LnFB, mpzFacBase, NextPrime,
-                            LowBound, myNum, theCut, DoubleLenB, vecMaxSize,
-                            strt, checkPoint0);
+                            myNum, LowBound, theCut, TwiceLenB, vecMaxSize,
+                            strt, vecMaxStrt, checkPoint0);
 
         myPoly.GetSolution(mpzFacBase, facBase, factors,
                            myNum, nThreads, checkPoint0);

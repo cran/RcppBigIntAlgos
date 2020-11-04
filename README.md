@@ -156,78 +156,139 @@ Big Integer ('bigz') object of length 2:
 system.time(print(quadraticSieve(semiPrime120bits)))
 Big Integer ('bigz') object of length 2:
 [1] 638300143449131711  1021796573707617139
-   user  system elapsed 
-  0.086   0.001   0.085
+ user  system elapsed 
+  0.1     0.0     0.1
   
 system.time(print(quadraticSieve(semiPrime130bits)))
 Big Integer ('bigz') object of length 2:
 [1] 14334377958732970351 29368224335577838231
    user  system elapsed 
-  0.102   0.000   0.103
+  0.111   0.001   0.111
 
 system.time(print(quadraticSieve(semiPrime140bits)))
 Big Integer ('bigz') object of length 2:
 [1] 143600566714698156857  1131320166687668315849
    user  system elapsed 
-  0.173   0.000   0.174
+  0.186   0.000   0.186
 ```
 
 ### Using Multiple Threads
 
-As of version `0.3.0`, we can utilize multiple threads with the help of [RcppThread](https://github.com/tnagler/RcppThread). For example, we factor the largest [Cunnaningham Most Wanted](<https://www.lehigh.edu/~bad0/msg06332.html>) number from the first edition released in 1983 in under a minute and [RSA-79](<https://members.loria.fr/PZimmermann/records/rsa.html>) can be factored in under 6 minutes on my machine. I obtained the best performance when `nThreads = stdThreadMax() / 2`. When the number of threads was maximized, there was a decrease in efficiency probably due to pollution of the cache.
+As of version `0.3.0`, we can utilize multiple threads with the help of [RcppThread](https://github.com/tnagler/RcppThread). For example, we factor the largest [Cunnaningham Most Wanted](<https://www.lehigh.edu/~bad0/msg06332.html>) number from the first edition released in 1983 in ~30 seconds and [RSA-79](<https://members.loria.fr/PZimmermann/records/rsa.html>) can be factored in under 4 minutes.
+
+Finally, we factor [RSA-99](<https://members.loria.fr/PZimmermann/records/rsa.html>) in under 9 hours.
+
+Below are my machine specs and R version info:
 
 ```r
-quadraticSieve(mostWanted1983, nThreads=4, skipExtPolRho=TRUE, showStats=TRUE)
+MacBook Pro (15-inch, 2017)
+Processor: 2.8 GHz Quad-Core Intel Core i7
+Memory; 16 GB 2133 MHz LPDDR3
+
+sessionInfo()
+R version 4.0.3 (2020-10-10)
+Platform: x86_64-apple-darwin17.0 (64-bit)
+Running under: macOS Catalina 10.15.7
+.
+.
+.
+other attached packages:
+[1] RcppBigIntAlgos_0.3.4 gmp_0.6-0            
+
+loaded via a namespace (and not attached):
+[1] compiler_4.0.3 tools_4.0.3    Rcpp_1.0.5
+
+## Maximum number of available threads
+stdThreadMax()
+[1] 8
+```
+
+### mostWanted1983
+
+```r
+mostWanted1983 <- as.bigz(div.bigz(sub.bigz(pow.bigz(10, 71), 1), 9))
+quadraticSieve(mostWanted1983, showStats=TRUE, nThreads=8, skipExtPolRho=TRUE)
 
 Summary Statistics for Factoring:
     11111111111111111111111111111111111111111111111111111111111111111111111
 
 |  Pollard Rho Time  |
 |--------------------|
-|        52ms        |
+|        59ms        |
 
 |      MPQS Time     | Complete | Polynomials |   Smooths  |  Partials  |
 |--------------------|----------|-------------|------------|------------|
-|      34s 765ms     |   100%   |    15919    |    4511    |    4461    |
+|      25s 100ms     |   100%   |    17291    |    4090    |    4345    |
 
 |  Mat Algebra Time  |    Mat Dimension   |
 |--------------------|--------------------|
-|      5s 123ms      |     8836 x 8972    |
+|      4s 634ms      |     8310 x 8435    |
 
 |     Total Time     |
 |--------------------|
-|      40s 133ms     |
+|      30s 15ms      |
 
 Big Integer ('bigz') object of length 2:
 [1] 241573142393627673576957439049            45994811347886846310221728895223034301839
+```
 
+### RSA-79
 
-## ***************************************************************************
-
-
-quadraticSieve(rsa79, showStats=TRUE, nThreads=4, skipExtPolRho=TRUE)
+```r
+rsa79 <- as.bigz("7293469445285646172092483905177589838606665884410340391954917800303813280275279")
+quadraticSieve(rsa79, showStats=TRUE, nThreads=8, skipExtPolRho=TRUE)
 
 Summary Statistics for Factoring:
     7293469445285646172092483905177589838606665884410340391954917800303813280275279
 
 |  Pollard Rho Time  |
 |--------------------|
-|        66ms        |
+|        68ms        |
 
 |      MPQS Time     | Complete | Polynomials |   Smooths  |  Partials  |
 |--------------------|----------|-------------|------------|------------|
-|    5m 19s 965ms    |   100%   |    100725   |    5581    |    7166    |
+|    3m 34s 444ms    |   100%   |    96071    |    5668    |    7080    |
 
 |  Mat Algebra Time  |    Mat Dimension   |
 |--------------------|--------------------|
-|      12s 694ms     |    12605 x 12747   |
+|      13s 800ms     |    12614 x 12748   |
 
 |     Total Time     |
 |--------------------|
-|    5m 33s 179ms    |
+|    3m 48s 833ms    |
 
 Big Integer ('bigz') object of length 2:
 [1] 848184382919488993608481009313734808977  8598919753958678882400042972133646037727
+```
+
+### RSA-99
+
+```r
+rsa99 <- "256724393281137036243618548169692747168133997830674574560564321074494892576105743931776484232708881"
+
+quadraticSieve(rsa99, showStats = TRUE, nThreads=8, skipExtPolRho=TRUE)
+
+Summary Statistics for Factoring:
+    256724393281137036243618548169692747168133997830674574560564321074494892576105743931776484232708881
+
+|  Pollard Rho Time  |
+|--------------------|
+|        80ms        |
+
+|      MPQS Time     | Complete | Polynomials |   Smooths  |  Partials  |
+|--------------------|----------|-------------|------------|------------|
+|  8h 53m 55s 288ms  |   100%   |   7674806   |    9213    |    15836   |
+
+|  Mat Algebra Time  |    Mat Dimension   |
+|--------------------|--------------------|
+|     2m 9s 171ms    |    24926 x 25049   |
+
+|     Total Time     |
+|--------------------|
+|   8h 56m 8s 871ms  |
+
+Big Integer ('bigz') object of length 2:
+[1] 4868376167980921239824329271069101142472222111193  52733064254484107837300974402288603361507691060217
 ```
 
 ### Factor More Than Just Semiprimes
@@ -244,31 +305,31 @@ Summary Statistics for Factoring:
 
 |  Pollard Rho Time  |
 |--------------------|
-|        51ms        |
+|        68ms        |
 
 |      MPQS Time     | Complete | Polynomials |   Smooths  |  Partials  |
 |--------------------|----------|-------------|------------|------------|
-|      11s 273ms     |   100%   |     2914    |    1704    |    2098    |
+|      10s 577ms     |   100%   |     2963    |    1705    |    2098    |
 
 |  Mat Algebra Time  |    Mat Dimension   |
 |--------------------|--------------------|
-|        470ms       |     3745 x 3802    |
+|        485ms       |     3763 x 3803    |
 
 
 Summary Statistics for Factoring:
-    369498233670465681342232176125551121921
+    202568699792573213335520384055117307693
 
 |      MPQS Time     | Complete | Polynomials |   Smooths  |  Partials  |
 |--------------------|----------|-------------|------------|------------|
-|        115ms       |   100%   |      63     |     597    |     246    |
+|        292ms       |   100%   |      70     |     494    |     319    |
 
 |  Mat Algebra Time  |    Mat Dimension   |
 |--------------------|--------------------|
-|        18ms        |      801 x 843     |
+|        79ms        |      791 x 813     |
 
 |     Total Time     |
 |--------------------|
-|      11s 997ms     |
+|      11s 709ms     |
 
 Big Integer ('bigz') object of length 3:
 [1] 11281626468262639417 17955629036507943829 32752213052784053513
@@ -289,7 +350,7 @@ However `gmp::factorize` is more suitable for numbers smaller than 70 bits (abou
 
 ## Safely Interrupt Execution in **`quadraticSieve`**
 
-If you want to interrupt a command which will take a long time, hit Ctrl + c, or esc if using RStudio, to stop execution.
+If you want to interrupt a command which will take a long time, hit Ctrl + c, or esc if using RStudio, to stop execution. When you utilize multiple threads with a very large number (e.g. 90 digit semiprime), you will be able to interrupt execution once every ~30 seconds.
 
 ```r
 ## User hits Ctrl + c
@@ -318,7 +379,7 @@ If you want to interrupt a command which will take a long time, hit Ctrl + c, or
 
 ## Current Research
 
-Currenlty, our main focus is on implementing our sieve in a parallel fashion.
+Currenlty, our main focus for version `0.4.0` will be implementing the self initiallizing quadratic sieve.
 
 ## Contact
 
