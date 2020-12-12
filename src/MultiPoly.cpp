@@ -1,62 +1,89 @@
 #include "MultPoly.h"
 
 namespace MPQS {
+
+    bool SieveIndex::IsDivisible(std::uint32_t myPrime, std::uint32_t ind) const {
+        return !((ind_1 + ind) % myPrime && (ind_2 + ind) % myPrime);
+    }
     
-    void SieveListsInit(const std::vector<int> &facBase, const std::vector<logType> &LnFB,
+    void SieveIndex::InitialSet(int temp, int q, int myMin,
+                                int myMax, int myPrime, int vecMaxSize) {
+        
+        ind_1 = (temp) ? ((myMin > q) ? myMin - q : myPrime + myMin - q) : temp;
+        ind_2 = (temp) ? ((myMax > q) ? myMax - q : myPrime + myMax - q) :
+            (q == myMin) ? (myMax - myMin) : myPrime - (myMax - myMin);
+        
+        int next_ind_1 = ((ind_1 - vecMaxSize) % myPrime) + myPrime;
+        offset = (next_ind_1 > ind_1) ? next_ind_1 - ind_1 : myPrime - ind_1 + next_ind_1;
+    }
+    
+    void SieveIndex::SmallSieve(std::vector<logType> &myLogs, int vecMaxSize,
+                                int myPrime, logType LnFB) {
+        
+        for (int j = ind_1; j < vecMaxSize; j += myPrime)
+            myLogs[j] += LnFB;
+        
+        for (int j = ind_2; j < vecMaxSize; j += myPrime)
+            myLogs[j] += LnFB;
+        
+        ind_1 = (ind_1 + offset >= myPrime) ? ind_1 + offset - myPrime : ind_1 + offset;
+        ind_2 = (ind_2 + offset >= myPrime) ? ind_2 + offset - myPrime : ind_2 + offset;
+    }
+
+    void SieveIndex::LargeSieve(std::vector<logType> &myLogs,
+                                int vecMaxSize, int myPrime, logType LnFB) {
+        
+        if (ind_1 < vecMaxSize) {
+            myLogs[ind_1] += LnFB;
+            ind_1 += (myPrime - vecMaxSize);
+        } else {
+            ind_1 -= vecMaxSize;
+        }
+        
+        if (ind_2 < vecMaxSize) {
+            myLogs[ind_2] += LnFB;
+            ind_2 += (myPrime - vecMaxSize);
+        } else {
+            ind_2 -= vecMaxSize;
+        }
+    }
+    
+    void SieveListsInit(const std::vector<int> &facBase,
+                        const std::vector<logType> &LnFB,
                         const std::vector<std::size_t> &SieveDist,
-                        std::vector<logType> &myLogs, std::vector<int> &myStart,
+                        std::vector<logType> &myLogs, std::vector<SieveIndex> &myStart,
                         const mpz_class &firstSqrDiff, const mpz_class &VarA,
-                        const mpz_class &VarB, std::size_t strt, int LowBound) {
+                        const mpz_class &VarB, std::size_t strt,
+                        int LowBound, int vecMaxSize) {
         
         mpz_class Temp;
-        const int vecMaxSize = myLogs.size();
         
         for (std::size_t i = strt, facSize = facBase.size(); i < facSize; ++i) {
-            Temp = VarA % facBase[i];
-            const int AUtil = int_invert(Temp.get_si(), facBase[i]);
+            auto&& myPrime = facBase[i];
+            Temp = VarA % myPrime;
+            const int AUtil = int_invert(Temp.get_ui(), myPrime);
             
             mpz_ui_sub(Temp.get_mpz_t(), SieveDist[i], VarB.get_mpz_t());
             Temp *= AUtil;
-            mpz_mod_ui(Temp.get_mpz_t(), Temp.get_mpz_t(), facBase[i]);
+            mpz_mod_ui(Temp.get_mpz_t(), Temp.get_mpz_t(), myPrime);
             int myMin = Temp.get_si();
             
-            mpz_ui_sub(Temp.get_mpz_t(), facBase[i] - SieveDist[i], VarB.get_mpz_t());
+            mpz_ui_sub(Temp.get_mpz_t(), myPrime - SieveDist[i], VarB.get_mpz_t());
             Temp *= AUtil;
-            mpz_mod_ui(Temp.get_mpz_t(), Temp.get_mpz_t(), facBase[i]);
+            mpz_mod_ui(Temp.get_mpz_t(), Temp.get_mpz_t(), myPrime);
             int myMax = Temp.get_si();
             
-            const int q = (LowBound % facBase[i]) + facBase[i];
-            mpz_mod_ui(Temp.get_mpz_t(), firstSqrDiff.get_mpz_t(), facBase[i]);
-            myStart[i * 2] = Temp.get_si();
+            const int q = (LowBound % myPrime) + myPrime;
+            mpz_mod_ui(Temp.get_mpz_t(), firstSqrDiff.get_mpz_t(), myPrime);
+            if (myMin > myMax) {std::swap(myMin, myMax);}
             
-            if (myMin > myMax)
-                std::swap(myMin, myMax);
+            myStart[i].InitialSet(Temp.get_si(), q, myMin,
+                                  myMax, myPrime, vecMaxSize);
             
-            if (myStart[i * 2] == 0) {
-                myStart[i * 2 + 1] = (q == myMin) ? (myMax - myMin) : facBase[i] - (myMax - myMin);
+            if (myPrime < vecMaxSize) {
+                myStart[i].SmallSieve(myLogs, vecMaxSize, myPrime, LnFB[i]);
             } else {
-                myStart[i * 2] = (myMin > q) ? myMin - q : facBase[i] + myMin - q;
-                myStart[i * 2 + 1] = (myMax > q) ? myMax - q : facBase[i] + myMax - q;
-            }
-            
-            if (facBase[i] < vecMaxSize) {
-                for (int row = i * 2, myPrime = facBase[i]; row <= (i * 2 + 1); ++row) {
-                    for (int j = myStart[row]; j < vecMaxSize; j += myPrime)
-                        myLogs[j] += LnFB[i];
-                    
-                    myStart[row] = ((myStart[row] - vecMaxSize) % myPrime) + myPrime;
-                }
-            } else {
-                for (int row = i * 2, myPrime = facBase[i]; row <= (i * 2 + 1); ++row) {
-                    if (myStart[row] < vecMaxSize) {
-                        myLogs[myStart[row]] += LnFB[i];
-                        myStart[row] = ((myStart[row] - vecMaxSize) % myPrime) + myPrime;
-                    } else if (myStart[row] < (2 * vecMaxSize)) {
-                        myStart[row] %= vecMaxSize;
-                    } else {
-                        myStart[row] -= vecMaxSize;
-                    }
-                }
+                myStart[i].LargeSieve(myLogs, vecMaxSize, myPrime, LnFB[i]);
             }
         }
     }
@@ -64,7 +91,7 @@ namespace MPQS {
     void SinglePoly(const std::vector<std::size_t> &SieveDist,
                     const std::vector<int> &facBase,
                     const std::vector<logType> &LnFB, vec2dint &powsOfSmooths,
-                    vec2dint &powsOfPartials, std::vector<int> &myStart,
+                    vec2dint &powsOfPartials, std::vector<SieveIndex> &myStart,
                     hash64vec &partFactorsMap, hash64mpz &partIntvlMap,
                     std::vector<mpz_class> &smoothInterval,
                     std::vector<uint64_t> &largeCoFactors,
@@ -73,11 +100,13 @@ namespace MPQS {
                     int LowBound, logType theCut, int TwiceLenB, int mpzFacSize,
                     int vecMaxSize, std::size_t strt, std::size_t vecMaxStrt) {
         
-        mpz_class VarA, VarB, VarC, Temp, IntVal;
+        mpz_class VarA, VarB, VarC, IntVal;
         TonelliShanksC(myNum, NextPrime, VarC);
         
         IntVal = VarC * 2u;
-        mpz_invert(IntVal.get_mpz_t(), IntVal.get_mpz_t(), NextPrime.get_mpz_t());
+        mpz_invert(IntVal.get_mpz_t(),
+                   IntVal.get_mpz_t(),
+                   NextPrime.get_mpz_t());
         
         VarA = NextPrime * NextPrime;
         VarB = (IntVal * (myNum - VarC * VarC) + VarC) % VarA;
@@ -86,23 +115,20 @@ namespace MPQS {
         IntVal = LowBound * (VarA * LowBound) + VarB * 2 * LowBound + VarC;
         std::vector<logType> myLogs(vecMaxSize);
         
-        SieveListsInit(facBase, LnFB, SieveDist, myLogs,
-                       myStart, IntVal, VarA, VarB, strt, LowBound);
+        SieveListsInit(facBase, LnFB, SieveDist, myLogs ,myStart,
+                       IntVal, VarA, VarB, strt, LowBound, vecMaxSize);
         
         for (int chunk = 0; chunk < TwiceLenB; chunk += vecMaxSize) {
             std::vector<int> largeLogs;
             
-            for (int i = 0, myLogSize = myLogs.size(); i < myLogSize; ++i)
+            for (int i = 0; i < vecMaxSize; ++i)
                 if (myLogs[i] > theCut)
                     largeLogs.push_back(i + chunk);
                 
             for (const auto lrgLog: largeLogs) {
-                std::vector<int> primeIndexVec;
+                std::vector<int> primeIndexVec = {mpzFacSize, mpzFacSize};
                 const int myIntVal = LowBound + lrgLog;
                 IntVal = (VarA * myIntVal) * myIntVal + (VarB * myIntVal) * 2 + VarC;
-                
-                // Add the index referring to A^2.. (i.e. add it twice)
-                primeIndexVec.insert(primeIndexVec.end(), 2, mpzFacSize);
                 
                 // If Negative, we push zero (i.e. the index referring to -1)
                 if (sgn(IntVal) < 0) {
@@ -110,73 +136,60 @@ namespace MPQS {
                     primeIndexVec.push_back(0);
                 }
                 
-                for (int j = 0, facSize = facBase.size(); j < facSize; ++j) {
+                for (std::size_t j = 0; j < strt; ++j) {
                     while (mpz_divisible_ui_p(IntVal.get_mpz_t(), facBase[j])) {
                         IntVal /= facBase[j];
                         primeIndexVec.push_back(j + 1);
                     }
                 }
                 
-                Temp = VarA * myIntVal + VarB;
+                for (std::uint32_t j = strt, facSize = facBase.size(),
+                     ind = vecMaxSize - (lrgLog - chunk); j < facSize; ++j) {
+                    if (myStart[j].IsDivisible(facBase[j], ind)) {
+                        do {
+                            IntVal /= facBase[j];
+                            primeIndexVec.push_back(j + 1);
+                        } while (mpz_divisible_ui_p(IntVal.get_mpz_t(), facBase[j]));
+                    }
+                }
                 
                 if (cmp(IntVal, 1u) == 0) {
                     // Found a smooth number
-                    smoothInterval.push_back(Temp);
+                    smoothInterval.push_back(VarA * myIntVal + VarB);
                     powsOfSmooths.push_back(primeIndexVec);
                 } else if (cmp(IntVal, Significand53) < 0) {
                     const uint64_t myKey = static_cast<uint64_t>(IntVal.get_d());
-                    const auto pFacIt = partFactorsMap.find(myKey);
+                    auto&& pFacIt = partFactorsMap.find(myKey);
                     
                     if (pFacIt != partFactorsMap.end()) {
                         largeCoFactors.push_back(myKey);
                         primeIndexVec.insert(primeIndexVec.begin(),
-                                             pFacIt->second.cbegin(), pFacIt->second.cend());
+                                             pFacIt->second.cbegin(),
+                                             pFacIt->second.cend());
                         
                         powsOfPartials.push_back(primeIndexVec);
-                        const auto intervalIt = partIntvlMap.find(myKey);
-                        partialInterval.push_back(Temp * intervalIt->second);
+                        auto&& intervalIt = partIntvlMap.find(myKey);
+                        partialInterval.push_back((VarA * myIntVal + VarB) *
+                                                  intervalIt->second);
                         
                         partFactorsMap.erase(pFacIt);
                         partIntvlMap.erase(intervalIt);
                     } else {
                         partFactorsMap[myKey] = primeIndexVec;
-                        partIntvlMap[myKey] = Temp;
+                        partIntvlMap[myKey] = VarA * myIntVal + VarB;
                     }
                 }
             }
             
-            if (chunk + 2 * vecMaxSize < TwiceLenB) {
-                std::fill(myLogs.begin(), myLogs.end(), 0);
+            if (chunk + vecMaxSize < TwiceLenB) {
+                std::fill(myLogs.begin(), myLogs.end(),
+                          static_cast<logType>(0));
                 
-                for (std::size_t i = strt; i < vecMaxStrt; ++i) {
-                    for (int row = i * 2, myPrime = facBase[i]; row <= (i * 2 + 1); ++row) {
-                        for (int j = myStart[row]; j < vecMaxSize; j += myPrime)
-                            myLogs[j] += LnFB[i];
-                        
-                        myStart[row] = ((myStart[row] - vecMaxSize) % myPrime) + myPrime;
-                    }
-                }
+                for (std::size_t i = strt; i < vecMaxStrt; ++i)
+                    myStart[i].SmallSieve(myLogs, vecMaxSize, facBase[i], LnFB[i]);
                 
-                for (std::size_t i = vecMaxStrt, facSize = facBase.size(); i < facSize; ++i) {
-                    for (int row = i * 2, myPrime = facBase[i]; row <= (i * 2 + 1); ++row) {
-                        if (myStart[row] < vecMaxSize) {
-                            myLogs[myStart[row]] += LnFB[i];
-                            myStart[row] = ((myStart[row] - vecMaxSize) % myPrime) + myPrime;
-                        } else if (myStart[row] < (2 * vecMaxSize)) {
-                            myStart[row] %= vecMaxSize;
-                        } else {
-                            myStart[row] -= vecMaxSize;
-                        }
-                    }
-                }
-            } else if (chunk + vecMaxSize < LowBound) {
-                myLogs.resize(LowBound % vecMaxSize);
-                std::fill(myLogs.begin(), myLogs.end(), 0);
-                
-                for (std::size_t i = strt, facSize = facBase.size(), logSize = myLogs.size(); i < facSize; ++i)
-                    for (std::size_t row = i * 2, myPrime = facBase[i]; row <= (i * 2 + 1); ++row)
-                        for (std::size_t j = myStart[row]; j < logSize; j += myPrime)
-                            myLogs[j] += LnFB[i];
+                for (std::size_t i = vecMaxStrt, facSize = facBase.size(); i < facSize; ++i)
+                    myStart[i].LargeSieve(myLogs, vecMaxSize, facBase[i], LnFB[i]);
             }
         }
     }

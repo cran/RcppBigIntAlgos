@@ -92,7 +92,6 @@ test_that("quadraticSieve generates correct numbers with multiple threads", {
 })
 
 test_that("quadraticSieve produces appropriate error messages", {
-    expect_error(quadraticSieve(1:10), "Can only factor one number at a time")
     expect_error(quadraticSieve(0), "Cannot factorize 0")
     expect_error(quadraticSieve(1234567, nThreads = "9"),
                  "This type is not supported! No conversion possible for nThreads")
@@ -100,6 +99,4 @@ test_that("quadraticSieve produces appropriate error messages", {
                  "nThreads must be a whole number")
     expect_error(quadraticSieve(1234567, showStats = "T"),
                  "Only logical values are supported for showStats")
-    expect_error(quadraticSieve(1234567, skipExtPolRho = "T"),
-                 "Only logical values are supported for skipExtPolRho")
 })

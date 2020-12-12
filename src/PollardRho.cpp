@@ -1,22 +1,22 @@
-/* Factoring with Pollard's rho method.
-
-N.B. Below is the original message of the file. There have been minor
-style edits and slight modifications for the RcppBigIntAlgos library
-
-Copyright 1995, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2005, 2009, 2012
-Free Software Foundation, Inc.
-
-This program is free software; you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation; either version 3 of the License, or (at your option) any later
-version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with
-this program.  If not, see http://www.gnu.org/licenses/.  */
+// Factoring with Pollard's rho method.
+// 
+// N.B. Below is the original message of the file. There have been minor
+// style edits and slight modifications for the RcppBigIntAlgos library
+// 
+// Copyright 1995, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2005, 2009, 2012
+// Free Software Foundation, Inc.
+// 
+// This program is free software; you can redistribute it and/or modify it under
+// the terms of the GNU General Public License as published by the Free Software
+// Foundation; either version 3 of the License, or (at your option) any later
+// version.
+// 
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY
+// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+// PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public License along with
+// this program.  If not, see http://www.gnu.org/licenses/. 
 
 #include "PollardRho.h"
 
@@ -68,13 +68,10 @@ void PollardRho(mpz_class &n, unsigned long int a,
     std::size_t k = 1u;
     std::size_t q = 1u;
 
-    while (cmp(n, 1) != 0) {
+    while (n != 1) {
         for (;;) {
             do {
-                x *= x;
-                x %= n;
-                x += a;
-                
+                x = (x * x) % n + a;
                 t = z - x;
                 mpz_mod(t.get_mpz_t(), t.get_mpz_t(), n.get_mpz_t());
                 p *= t;
@@ -94,22 +91,17 @@ void PollardRho(mpz_class &n, unsigned long int a,
             k = q;
             q <<= 1;
             
-            for (std::size_t i = 0; i < k; ++i) {
-                x *= x;
-                x %= n;
-                x += a;
-            }
+            for (std::size_t i = 0; i < k; ++i)
+                x = (x * x) % n + a;
             
             y = x;
         }
 
         factor_found:
         do {
-            y *= y;
-            y %= n;
-            y += a;
+            y = (y * y) % n + a;
             t = gcd(z - y, n);
-        } while (cmp(t, 1) == 0);
+        } while (t == 1);
 
         n /= t;	/* divide by t, before t is overwritten */
 

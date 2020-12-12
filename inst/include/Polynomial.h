@@ -5,19 +5,17 @@
 #include "MultPoly.h"
 #include "StatsUtils.h"
 
-using typeTimePoint = std::chrono::time_point<std::chrono::steady_clock>;
-
 class Polynomial {
 private:
     vec2dint powsOfSmooths;
     vec2dint powsOfPartials;
     
-    std::vector<int> myStart;
+    std::vector<MPQS::SieveIndex> myStart;
     hash64vec partFactorsMap;
     hash64mpz partIntvlMap;
     
     std::vector<mpz_class> smoothInterval;
-    std::vector<uint64_t> largeCoFactors;
+    std::vector<std::uint64_t> largeCoFactors;
     std::vector<mpz_class> partialInterval;
     
     std::size_t nPolys;
@@ -32,7 +30,7 @@ private:
     void MergeMaster(vec2dint &powsOfSmoothsBig, vec2dint &powsOfPartialsBig,
                      hash64vec &partFactorsMapBig, hash64mpz &partIntvlMapBig,
                      std::vector<mpz_class> &smoothIntervalBig,
-                     std::vector<uint64_t> &largeCoFactorsBig, 
+                     std::vector<std::uint64_t> &largeCoFactorsBig, 
                      std::vector<mpz_class> &partialIntervalBig);
     
     void SetMpzFacSize(int _mpzFacSize) {mpzFacSize = _mpzFacSize;}

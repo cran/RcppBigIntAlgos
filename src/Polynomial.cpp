@@ -10,7 +10,7 @@ constexpr std::size_t bigFacsFOUR = 4u;
 void Polynomial::MergeMaster(vec2dint &powsOfSmoothsBig, vec2dint &powsOfPartialsBig,
                              hash64vec &partFactorsMapBig, hash64mpz &partIntvlMapBig,
                              std::vector<mpz_class> &smoothIntervalBig,
-                             std::vector<uint64_t> &largeCoFactorsBig, 
+                             std::vector<std::uint64_t> &largeCoFactorsBig, 
                              std::vector<mpz_class> &partialIntervalBig) {
     
     powsOfSmoothsBig.insert(powsOfSmoothsBig.end(),
@@ -38,11 +38,11 @@ void Polynomial::MergeMaster(vec2dint &powsOfSmoothsBig, vec2dint &powsOfPartial
                              std::make_move_iterator(largeCoFactors.end())
     );
     
-    std::vector<uint64_t> deleteLater;
+    std::vector<std::uint64_t> deleteLater;
     
     // First identify intersection
     for (const auto &pFac: partFactorsMap) {
-        const auto pFacBigIt = partFactorsMapBig.find(pFac.first);
+        auto&& pFacBigIt = partFactorsMapBig.find(pFac.first);
 
         if (pFacBigIt != partFactorsMapBig.end()) {
             largeCoFactorsBig.push_back(pFac.first);
@@ -73,7 +73,7 @@ Polynomial::Polynomial(std::size_t _facSize, bool _bShowStats, const mpz_class &
     
     powsOfSmooths.reserve(_facSize);
     powsOfPartials.reserve(_facSize);
-    myStart.assign(_facSize * 2, 0);
+    myStart.resize(_facSize);
     
     nPolys = 0;
     nPartial = 0;
@@ -89,7 +89,7 @@ Polynomial::Polynomial(std::size_t _facSize, bool _bShowStats, const mpz_class &
 Polynomial::Polynomial(std::size_t _facSize) : 
     SaPThresh(_facSize), facSize(_facSize), bShowStats(false) {
 
-    myStart.assign(_facSize * 2, 0);
+    myStart.resize(_facSize);
     nPolys = 0;
     nPartial = 0;
     nSmooth = 0;
@@ -140,8 +140,6 @@ void Polynomial::InitialParSieve(const std::vector<std::size_t> &SieveDist,
                                  std::size_t vecMaxStrt, typeTimePoint checkPoint0) {
     
     auto checkPoint1 = std::chrono::steady_clock::now();
-    auto checkPoint2 = checkPoint1;
-    
     auto showStatsTime = (checkPoint1 - checkPoint0);
     GetNPrimes(mpzFacBase, NextPrime, myNum, MinPolysPerThrd);
     
@@ -156,14 +154,11 @@ void Polynomial::InitialParSieve(const std::vector<std::size_t> &SieveDist,
     if ((checkPoint3 - checkPoint1) > checkInterTime) {
         // Check for user interrupt and udpate timepoint
         RcppThread::checkUserInterrupt();
-        checkPoint1 = std::chrono::steady_clock::now();
     }
     
-    if (bShowStats && (checkPoint3 - checkPoint2) > showStatsTime) {
+    if (bShowStats && (checkPoint3 - checkPoint1) > showStatsTime) {
         MakeStats(SaPThresh, nPolys, nSmooth,
                   nPartial, checkPoint3 - checkPoint0);
-        
-        checkPoint2 = std::chrono::steady_clock::now();
         UpdateStatTime(nSmooth + nPartial, facSize,
                        checkPoint3 - checkPoint0, showStatsTime);
     }
@@ -390,7 +385,7 @@ void Polynomial::GetSolution(const std::vector<mpz_class> &mpzFacBase,
     std::vector<std::size_t> coFactorIndexVec;
     coFactorIndexVec.reserve(largeCoFactors.size());
     
-    std::unordered_map<uint64_t, std::size_t> keepingTrack;
+    std::unordered_map<std::uint64_t, std::size_t> keepingTrack;
     keepingTrack.reserve(largeCoFactors.size());
     
     std::vector<double> uniLargeCoFacs;

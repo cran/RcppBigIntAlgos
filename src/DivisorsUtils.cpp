@@ -1,29 +1,24 @@
-/*! 
- *  \file factorization.cc
- *  \brief C functions used for integer factorization.
- *      - myMergeSort is a modified merge sort algorithm. The classic merge
- *        sort creates an empty vector of the type you are sorting and fills
- *        in the ordered elements from two smaller sorted vectors. This
- *        would be expensive with type mpz_t. For this reason, we only keep
- *        track of the indices and never actually swap any of the indices in
- *        the mpz_t array. An integer vector of indices is returned and is
- *        used in writing out the output at the very bottom.  This method
- *        shows great efficiency gains over the naive method of using the
- *        class bigvec (from the R gmp package)/std::sort combination.
- *
- *  \version 1
- *
- *  \date Created: 10/06/17
- *  \date Last modified: Time-stamp: <2020-09-14 jwood000>
- *
- *  \author Joseph Wood. Original C code from libgmp.
- *       See factor.cc from the R gmp package for more details.
- *
- *  \note Licence: GPL (>=) 2
- */
+// Description:
+//     myMergeSort is a modified merge sort algorithm. The classic merge
+//     sort creates an empty vector of the type you are sorting and fills
+//     in the ordered elements from two smaller sorted vectors. This
+//     would be expensive with type mpz_t. For this reason, we only keep
+//     track of the indices and never actually swap any of the indices in
+//     the mpz_t array. An integer vector of indices is returned and is
+//     used in writing out the output at the very bottom.  This method
+//     shows great efficiency gains over the naive method of using the
+//     class bigvec (from the R gmp package)/std::sort combination.
+//
+// Date Created: 10/06/17
+// Date Last modified: Time-stamp: <2020-09-14 jwood000>
+// 
+// Author Joseph Wood. Original C code from libgmp.
+//    See factor.cc from the R gmp package for more details.
+// 
+// Note Licence: GPL (>=) 2
 
-#include "FactorUtils.h"
-#include "RSAFactorUtils.h"
+#include "DivisorsUtils.h"
+#include "PrimeFactorUtils.h"
 #include "Cpp14MakeUnique.h"
 
 std::vector<int> myMergeSort(mpz_t *const arr, const std::vector<int> &indPass,
@@ -127,7 +122,8 @@ std::vector<int> myMergeSort(mpz_t *const arr, const std::vector<int> &indPass,
     return myInd;
 }
 
-SEXP FactorNum(mpz_class &val) {
+SEXP FactorNum(mpz_class &val, std::size_t nThreads,
+               bool bShowStats, bool bSkipPR, bool bSkipECM) {
     
     if (cmp(val, 1) == 0) {
         mpz_class mpzOne = 1;
@@ -155,14 +151,13 @@ SEXP FactorNum(mpz_class &val) {
         }
         
         if (mpz_sizeinbase(val.get_mpz_t(), 10) > 23) {
-            std::size_t nThreads = 1;
-            QuadSieveHelper(val, primeFacs, lengths, nThreads, false, false);
+            QuadSieveHelper(val, primeFacs, lengths,
+                            nThreads, bShowStats, bSkipPR, bSkipECM);
         } else {
             GetPrimeFactors(val, primeFacs, lengths);
         }
         
         QuickSort(primeFacs, 0, lengths.size() - 1, lengths);
-        
         std::vector<int> myIndex(lengths[0] + 1);
         std::size_t numFacs = 1;
         

@@ -19,6 +19,36 @@ test_that("divisorsBig generates correct numbers", {
                                                  namedList = TRUE))), (10^12):(10^12 + 100))
 })
 
+test_that("divisorsBig generates correct numbers with multiple threads", {
+    test1 <- nextprime(urand.bigz(2, 82, 8191))
+    expect_equal(prod(divisorsBig(prod(test1), nThreads = 2,
+                                  skipECM = TRUE, skipPolRho = TRUE)), prod(test1)^2)
+
+    test2 <- nextprime(urand.bigz(2, 83, 8191))
+    expect_equal(prod(divisorsBig(prod(test2), nThreads = 2,
+                                  skipECM = TRUE, skipPolRho = TRUE)), prod(test2)^2)
+
+    test3 <- nextprime(urand.bigz(2, 84, 8191))
+    expect_equal(prod(divisorsBig(prod(test3), nThreads = 2,
+                                  skipECM = TRUE, skipPolRho = TRUE)), prod(test3)^2)
+
+    test4 <- nextprime(urand.bigz(2, 85, 8191))
+    expect_equal(prod(divisorsBig(prod(test4), nThreads = 2,
+                                  skipECM = TRUE, skipPolRho = TRUE)), prod(test4)^2)
+
+    test5 <- nextprime(urand.bigz(2, 86, 8191))
+    expect_equal(prod(divisorsBig(prod(test5), nThreads = 2,
+                                  skipECM = TRUE, skipPolRho = TRUE)), prod(test5)^2)
+})
+
 test_that("divisorsBig produces appropriate error messages", {
     expect_error(divisorsBig(0), "Cannot factorize 0")
+    expect_error(divisorsBig(1234567, skipPolRho = "T"),
+                 "Only logical values are supported for skipPolRho")
+    expect_error(divisorsBig(1234567, skipECM = "T"),
+                 "Only logical values are supported for skipECM")
+    expect_error(divisorsBig(1234567, nThreads = "9"),
+                 "This type is not supported! No conversion possible for nThreads")
+    expect_error(divisorsBig(1234567, nThreads = 3.5),
+                 "nThreads must be a whole number")
 })
