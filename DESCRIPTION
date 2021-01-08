@@ -1,7 +1,7 @@
 Package: RcppBigIntAlgos
 Type: Package
 Title: Factor Big Integers with the Parallel Quadratic Sieve
-Version: 1.0.0
+Version: 1.0.1
 Authors@R: c(person("Joseph","Wood", role=c("aut","cre"), email="jwood000@gmail.com"),
              person("Free Software Foundation, Inc.", role ="cph"),
              person("Mike","Tryczak", role="ctb"))
@@ -33,9 +33,9 @@ URL: https://github.com/jwood000/RcppBigIntAlgos, https://gmplib.org/,
         https://blogs.msdn.microsoft.com/devdev/2006/06/19/factoring-large-numbers-with-quadratic-sieve/
 BugReports: https://github.com/jwood000/RcppBigIntAlgos/issues
 RoxygenNote: 7.1.0
-Packaged: 2020-12-12 16:37:23 UTC; josephwood
+Packaged: 2021-01-08 13:59:57 UTC; josephwood
 Author: Joseph Wood [aut, cre],
   Free Software Foundation, Inc. [cph],
   Mike Tryczak [ctb]
 Repository: CRAN
-Date/Publication: 2020-12-12 17:20:02 UTC
+Date/Publication: 2021-01-08 16:10:10 UTC
